@@ -66,7 +66,16 @@ def fetch_dem(bbox: tuple, url_template: str, dem_dir: Path) -> list[Path]:
 
 
 def with_overpass_fallback(cfg: dict, fn):
-    """Run an OSMnx download, walking the endpoint list until one works."""
+    """Run an OSMnx download, walking the endpoint list until one works.
+
+    The endpoints flip between healthy and overloaded within hours, so when
+    a whole round fails we wait and start over. Finished sub-queries sit in
+    the OSMnx response cache, so every retry only fetches what is missing.
+    Overloaded servers either refuse the connection (RequestException) or
+    return an HTML error page that OSMnx reports as a ValueError subclass.
+    """
+    import time
+
     import osmnx as ox
     import requests
 
@@ -76,15 +85,19 @@ def with_overpass_fallback(cfg: dict, fn):
         cfg["overpass_connect_timeout_s"], cfg["overpass_timeout_s"]
     )
     last_error = None
-    for url in cfg["overpass_urls"]:
-        ox.settings.overpass_url = url
-        ox.settings.overpass_rate_limit = "overpass-api.de" in url
-        print(f"using Overpass endpoint {url} ...")
-        try:
-            return fn()
-        except requests.RequestException as err:
-            print(f"endpoint failed ({err}); trying next")
-            last_error = err
+    for round_no in range(1, cfg["overpass_retry_rounds"] + 1):
+        for url in cfg["overpass_urls"]:
+            ox.settings.overpass_url = url
+            ox.settings.overpass_rate_limit = "overpass-api.de" in url
+            print(f"round {round_no}: using Overpass endpoint {url} ...")
+            try:
+                return fn()
+            except (requests.RequestException, ValueError) as err:
+                print(f"endpoint failed ({type(err).__name__}: {err}); trying next")
+                last_error = err
+        if round_no < cfg["overpass_retry_rounds"]:
+            print(f"all endpoints failed; retrying in {cfg['overpass_retry_wait_s']} s")
+            time.sleep(cfg["overpass_retry_wait_s"])
     raise last_error
 
 

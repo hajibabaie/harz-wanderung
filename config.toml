@@ -31,6 +31,9 @@ overpass_query_km2 = 400
 # Dead endpoints fail after the connect timeout; slow queries may read long.
 overpass_connect_timeout_s = 15
 overpass_timeout_s = 300
+# When every endpoint fails, wait and try the whole list again.
+overpass_retry_rounds = 20
+overpass_retry_wait_s = 180
 
 [trip]
 loop_km_min = 10.0
