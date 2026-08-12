@@ -1,0 +1,23 @@
+# All settings for the Harz Saturday-trip planner. Code reads only this file.
+
+[home]
+name = "Clausthal-Zellerfeld"
+lat = 51.8081
+lon = 10.3358
+
+[data]
+# Official GPS download. Free for private personal use; do not redistribute.
+gpx_url = "https://www.harzer-wandernadel.de/wp-content/uploads/2025/05/GPX-Daten-Stempelstellen-ZIP-Archiv-gepackt-Stand-23.04.2025.zip"
+stamp_count = 222
+
+[trip]
+loop_km_min = 10.0
+loop_km_max = 18.0
+ascent_m_max = 600
+stamps_min = 2
+stamps_ideal_min = 3
+stamps_ideal_max = 5
+
+[progress]
+# Stamp numbers already collected. Later stages drop them from planning.
+done = []
