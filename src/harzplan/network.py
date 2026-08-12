@@ -81,6 +81,12 @@ def with_overpass_fallback(cfg: dict, fn):
 
     ox.settings.cache_folder = str(config.ROOT / "cache" / "osmnx")
     ox.settings.max_query_area_size = cfg["overpass_query_km2"] * 1e6
+    # OSMnx interpolates requests_timeout into the Overpass query string,
+    # where a (connect, read) tuple is invalid — so fix the server-side
+    # timeout in the query template and keep the tuple for HTTP only.
+    ox.settings.overpass_settings = (
+        f"[out:json][timeout:{cfg['overpass_timeout_s']}]"
+    )
     ox.settings.requests_timeout = (
         cfg["overpass_connect_timeout_s"], cfg["overpass_timeout_s"]
     )
