@@ -28,6 +28,8 @@ overpass_urls = [
     "https://overpass.private.coffee/api",
 ]
 overpass_query_km2 = 400
+# Dead endpoints fail after the connect timeout; slow queries may read long.
+overpass_connect_timeout_s = 15
 overpass_timeout_s = 300
 
 [trip]

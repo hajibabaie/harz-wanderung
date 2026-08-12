@@ -72,7 +72,9 @@ def with_overpass_fallback(cfg: dict, fn):
 
     ox.settings.cache_folder = str(config.ROOT / "cache" / "osmnx")
     ox.settings.max_query_area_size = cfg["overpass_query_km2"] * 1e6
-    ox.settings.requests_timeout = cfg["overpass_timeout_s"]
+    ox.settings.requests_timeout = (
+        cfg["overpass_connect_timeout_s"], cfg["overpass_timeout_s"]
+    )
     last_error = None
     for url in cfg["overpass_urls"]:
         ox.settings.overpass_url = url
