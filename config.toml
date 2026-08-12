@@ -33,6 +33,12 @@ stamps_ideal_max = 5
 # Clustering keeps this much loop budget free for the walk to/from parking.
 trailhead_reserve_km = 2.0
 
+[route]
+# Trailhead search: OSM parking spots within this straight-line distance
+# of any stamp in the cluster; the best of the closest few wins.
+parking_radius_km = 2.0
+max_parking_candidates = 5
+
 [progress]
 # Stamp numbers already collected. Later stages drop them from planning.
 done = []

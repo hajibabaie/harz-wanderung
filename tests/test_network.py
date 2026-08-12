@@ -76,6 +76,11 @@ def test_stamp_matrices_limit_and_unreachable_are_inf():
     assert np.isinf(dist[0, 2])  # node 4 is disconnected
 
 
+def test_walk_path_follows_predecessors_from_source_to_target():
+    pred = np.array([-9999, 0, 1])
+    assert network.walk_path(pred, 0, 2) == [0, 1, 2]
+
+
 def test_snap_stamps_picks_nearest_node_with_distance():
     G = _toy_graph()
     stamps = [{"number": 42, "lat": 51.8001, "lon": 10.31}]

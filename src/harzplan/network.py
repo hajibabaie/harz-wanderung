@@ -100,8 +100,8 @@ def add_elevations(G, dem_paths: list[Path]) -> None:
         G.nodes[n]["elevation"] = float(e)
 
 
-def snap_stamps(G, stamps: list[dict]) -> dict[int, tuple]:
-    """Map stamp number -> (nearest graph node, snap distance in metres)."""
+def nearest_graph_nodes(G, lonlats: list[tuple]) -> list[tuple]:
+    """For each (lon, lat) return (nearest graph node, distance in metres)."""
     from scipy.spatial import cKDTree
 
     nodes = list(G.nodes)
@@ -110,26 +110,30 @@ def snap_stamps(G, stamps: list[dict]) -> dict[int, tuple]:
     mx = 111_320 * math.cos(math.radians(float(ys.mean())))
     my = 110_574
     tree = cKDTree(np.c_[xs * mx, ys * my])
-    out = {}
-    for s in stamps:
-        d, i = tree.query([s["lon"] * mx, s["lat"] * my])
-        out[s["number"]] = (nodes[int(i)], float(d))
+    out = []
+    for lon, lat in lonlats:
+        d, i = tree.query([lon * mx, lat * my])
+        out.append((nodes[int(i)], float(d)))
     return out
 
 
-def stamp_matrices(G, node_by_number: dict, limit_m: float):
-    """Network distance (symmetric) and path ascent (directional) between stamps.
+def snap_stamps(G, stamps: list[dict]) -> dict[int, tuple]:
+    """Map stamp number -> (nearest graph node, snap distance in metres)."""
+    hits = nearest_graph_nodes(G, [(s["lon"], s["lat"]) for s in stamps])
+    return {s["number"]: hit for s, hit in zip(stamps, hits)}
 
-    One C-speed Dijkstra per stamp over a CSR adjacency matrix; ascent is
-    summed from node elevations along each predecessor path.
+
+def build_csr(G):
+    """Graph as a CSR adjacency matrix for C-speed Dijkstra.
+
+    Returns (A, nodes, idx, elev): parallel edges collapse to their minimum
+    length, node order in `nodes` matches CSR indices and `elev`.
     """
     from scipy.sparse import csr_matrix
-    from scipy.sparse.csgraph import dijkstra
 
     nodes = list(G.nodes)
     idx = {n: i for i, n in enumerate(nodes)}
     elev = np.array([G.nodes[n].get("elevation", 0.0) for n in nodes])
-
     best: dict[tuple, float] = {}
     for u, v, data in G.edges(data=True):
         key = (idx[u], idx[v])
@@ -140,25 +144,53 @@ def stamp_matrices(G, node_by_number: dict, limit_m: float):
     cols = np.array([k[1] for k in best], dtype=np.int64)
     vals = np.array(list(best.values()))
     A = csr_matrix((vals, (rows, cols)), shape=(len(nodes), len(nodes)))
+    return A, nodes, idx, elev
 
-    numbers = sorted(node_by_number)
-    src = [idx[node_by_number[m]] for m in numbers]
-    k = len(numbers)
+
+def walk_path(pred: np.ndarray, si: int, ti: int) -> list[int]:
+    """Node index path source -> target from a Dijkstra predecessor array."""
+    path = [ti]
+    while path[-1] != si:
+        path.append(int(pred[path[-1]]))
+    path.reverse()
+    return path
+
+
+def pairwise(A, elev: np.ndarray, src_idx: list[int], limit_m: float,
+             want_pred: bool = False):
+    """Distance (m) and path ascent (m, directional) between the given nodes.
+
+    One Dijkstra per source; ascent is summed from node elevations along
+    each predecessor path. Optionally keeps the predecessor arrays for
+    later geometry extraction.
+    """
+    from scipy.sparse.csgraph import dijkstra
+
+    k = len(src_idx)
     dist = np.full((k, k), np.inf)
     ascent = np.full((k, k), np.inf)
-    for a, si in enumerate(src):
+    preds = []
+    for a, si in enumerate(src_idx):
         d, pred = dijkstra(A, indices=si, return_predecessors=True, limit=limit_m)
+        if want_pred:
+            preds.append(pred)
         dist[a, a] = ascent[a, a] = 0.0
-        for b, ti in enumerate(src):
+        for b, ti in enumerate(src_idx):
             if b == a or not np.isfinite(d[ti]):
                 continue
             dist[a, b] = d[ti]
-            path = [ti]
-            while path[-1] != si:
-                path.append(pred[path[-1]])
-            path.reverse()
+            path = walk_path(pred, si, ti)
             gain = elev[path[1:]] - elev[path[:-1]]
             ascent[a, b] = float(np.maximum(gain, 0.0).sum())
+    return dist, ascent, preds if want_pred else None
+
+
+def stamp_matrices(G, node_by_number: dict, limit_m: float):
+    """Network distance and ascent between all stamps, by stamp number."""
+    A, nodes, idx, elev = build_csr(G)
+    numbers = sorted(node_by_number)
+    src = [idx[node_by_number[m]] for m in numbers]
+    dist, ascent, _ = pairwise(A, elev, src, limit_m)
     return numbers, dist, ascent
 
 
