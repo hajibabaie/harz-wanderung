@@ -10,6 +10,19 @@ lon = 10.3358
 gpx_url = "https://www.harzer-wandernadel.de/wp-content/uploads/2025/05/GPX-Daten-Stempelstellen-ZIP-Archiv-gepackt-Stand-23.04.2025.zip"
 stamp_count = 222
 
+[network]
+# Bounding box = stamp extent + this buffer.
+bbox_buffer_km = 2.0
+# Warn when a stamp snaps to a network node farther than this.
+snap_warn_m = 500
+# Pairwise distances beyond this limit are stored as infinity.
+pair_dist_limit_km = 30.0
+# Copernicus GLO-30 DEM tiles (open data on AWS, no login).
+dem_url_template = "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{tile}_DEM/Copernicus_DSM_COG_10_{tile}_DEM.tif"
+# Overpass download tuning for the big walking-network fetch.
+overpass_query_km2 = 400
+overpass_timeout_s = 300
+
 [trip]
 loop_km_min = 10.0
 loop_km_max = 18.0

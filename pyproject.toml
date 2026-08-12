@@ -3,7 +3,11 @@ name = "harzplan"
 version = "0.1.0"
 description = "Saturday day-trip planner for the Harzer Wandernadel (222 stamps)"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "osmnx>=2.1.1",
+    "rasterio>=1.4.4",
+    "scipy>=1.17.1",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]
