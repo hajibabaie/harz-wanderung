@@ -67,12 +67,22 @@ def fetch_dem(bbox: tuple, url_template: str, dem_dir: Path) -> list[Path]:
 
 def build_graph(bbox: tuple, cfg: dict):
     import osmnx as ox
+    import requests
 
     ox.settings.cache_folder = str(config.ROOT / "cache" / "osmnx")
     ox.settings.max_query_area_size = cfg["overpass_query_km2"] * 1e6
     ox.settings.requests_timeout = cfg["overpass_timeout_s"]
-    print(f"downloading walking network for bbox {bbox} ...")
-    return ox.graph_from_bbox(bbox, network_type="walk", simplify=True)
+    last_error = None
+    for url in cfg["overpass_urls"]:
+        ox.settings.overpass_url = url
+        ox.settings.overpass_rate_limit = "overpass-api.de" in url
+        print(f"downloading walking network via {url}, bbox {bbox} ...")
+        try:
+            return ox.graph_from_bbox(bbox, network_type="walk", simplify=True)
+        except requests.RequestException as err:
+            print(f"endpoint failed ({err}); trying next")
+            last_error = err
+    raise last_error
 
 
 def add_elevations(G, dem_paths: list[Path]) -> None:

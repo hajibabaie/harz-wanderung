@@ -20,6 +20,13 @@ pair_dist_limit_km = 30.0
 # Copernicus GLO-30 DEM tiles (open data on AWS, no login).
 dem_url_template = "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{tile}_DEM/Copernicus_DSM_COG_10_{tile}_DEM.tif"
 # Overpass download tuning for the big walking-network fetch.
+# Endpoints are tried in order; each one flips between healthy and
+# overloaded within hours, so keep several here.
+overpass_urls = [
+    "https://overpass-api.de/api",
+    "https://overpass.kumi.systems/api",
+    "https://overpass.private.coffee/api",
+]
 overpass_query_km2 = 400
 overpass_timeout_s = 300
 
@@ -38,6 +45,26 @@ trailhead_reserve_km = 2.0
 # of any stamp in the cluster; the best of the closest few wins.
 parking_radius_km = 2.0
 max_parking_candidates = 5
+
+[osrm]
+# Public OSRM demo server for home-to-trailhead drive times.
+base_url = "https://router.project-osrm.org"
+# The demo server caps table requests at ~100 locations.
+chunk_size = 80
+
+[time]
+# Naismith walking-time rule with the Langmuir descent correction.
+walk_speed_kmh = 5.0
+climb_min_per_100m = 10.0
+gentle_descent_min_per_300m = -10.0
+
+[badges]
+# Stamp counts that earn a Harzer Wandernadel badge.
+thresholds = [[8, "Bronze"], [16, "Silber"], [24, "Gold"], [50, "Wanderkönig"], [111, "Wanderkaiser"], [222, "Harzer Steiger"]]
+
+[outputs]
+# The Folium map thins each loop to this many points (GPX keeps all).
+map_points_per_trip = 300
 
 [progress]
 # Stamp numbers already collected. Later stages drop them from planning.
