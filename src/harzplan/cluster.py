@@ -59,6 +59,8 @@ def cluster_metrics(members: list[int], D: np.ndarray, A: np.ndarray):
     if len(members) == 1:
         return list(members), 0.0, 0.0
     order_idx, length = tsp_tour(D[np.ix_(members, members)])
+    if order_idx is None:
+        return list(members), float("inf"), float("inf")
     ascent = tour_ascent(order_idx, A[np.ix_(members, members)])
     return [members[i] for i in order_idx], length, ascent
 

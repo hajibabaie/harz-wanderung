@@ -71,6 +71,17 @@ def test_build_clusters_unreachable_stamps_stay_singleton():
     assert all(c["singleton"] for c in out)
 
 
+def test_build_clusters_survives_limit_truncated_pairs():
+    # The Dijkstra limit truncates long pairs to inf, so a merge candidate
+    # can have a finite gap while another cross-pair is infinite.
+    numbers = [1, 2, 3]
+    D = line_dist([0, 7, 33])
+    D[D > 30000] = np.inf
+    out = cluster.build_clusters(numbers, D, np.zeros((3, 3)), TRIP)
+    total = sorted(n for c in out for n in c["stamps"])
+    assert total == [1, 2, 3]
+
+
 def test_build_clusters_respects_ascent_cap():
     numbers = [1, 2, 3]
     D = line_dist([0, 1, 2])
