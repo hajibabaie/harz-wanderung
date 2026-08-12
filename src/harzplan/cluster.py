@@ -139,6 +139,9 @@ def build_clusters(numbers: list[int], dist: np.ndarray, ascent: np.ndarray,
 
 def main() -> None:
     cfg = config.load()
+    if CLUSTERS_PATH.exists():
+        print(f"{CLUSTERS_PATH} already exists — nothing to do")
+        return
     m = np.load(MATRIX_PATH)
     numbers = m["numbers"].tolist()
     done = set(cfg["progress"]["done"])

@@ -65,7 +65,8 @@ def fetch_dem(bbox: tuple, url_template: str, dem_dir: Path) -> list[Path]:
     return paths
 
 
-def build_graph(bbox: tuple, cfg: dict):
+def with_overpass_fallback(cfg: dict, fn):
+    """Run an OSMnx download, walking the endpoint list until one works."""
     import osmnx as ox
     import requests
 
@@ -76,13 +77,22 @@ def build_graph(bbox: tuple, cfg: dict):
     for url in cfg["overpass_urls"]:
         ox.settings.overpass_url = url
         ox.settings.overpass_rate_limit = "overpass-api.de" in url
-        print(f"downloading walking network via {url}, bbox {bbox} ...")
+        print(f"using Overpass endpoint {url} ...")
         try:
-            return ox.graph_from_bbox(bbox, network_type="walk", simplify=True)
+            return fn()
         except requests.RequestException as err:
             print(f"endpoint failed ({err}); trying next")
             last_error = err
     raise last_error
+
+
+def build_graph(bbox: tuple, cfg: dict):
+    import osmnx as ox
+
+    print(f"downloading walking network, bbox {bbox} ...")
+    return with_overpass_fallback(
+        cfg, lambda: ox.graph_from_bbox(bbox, network_type="walk", simplify=True)
+    )
 
 
 def add_elevations(G, dem_paths: list[Path]) -> None:

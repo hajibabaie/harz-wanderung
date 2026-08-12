@@ -1,16 +1,8 @@
 # Harz Wanderung — Saturday trip planner
 
 Plans Saturday day-trips to collect all 222 Harzer Wandernadel stamps,
-starting from Clausthal-Zellerfeld. Built stage by stage; every stage
-caches its work, so re-runs are cheap.
-
-## Status
-
-- [x] Step 1 — stamp data (`data/stamps.geojson`, 222/222 recovered)
-- [ ] Step 2 — walking network + elevation
-- [ ] Step 3 — cluster stamps into day-trips
-- [ ] Step 4 — route each trip (TSP + parking)
-- [ ] Step 5 — rank trips, write plan.csv / GPX / map / progress list
+starting from Clausthal-Zellerfeld. Real walking-network distances, real
+elevation, parking trailheads, and drive times — not straight lines.
 
 ## Setup
 
@@ -18,34 +10,59 @@ Needs [uv](https://docs.astral.sh/uv/). Then:
 
     uv sync
 
-## Run Step 1 again
+## Run the whole pipeline
 
-    uv run python -m harzplan.acquire
+    uv run python -m harzplan
 
-- The official GPX ZIP is cached at `cache/hwn_gpx.zip`.
-  Delete that file to force a fresh download (for example when the
-  official site publishes a new year's file — then also update
-  `gpx_url` in `config.toml`).
-- Output: `data/stamps.geojson` plus a recovered/missing report.
-  The script never invents coordinates; gaps stay visible.
+Every stage caches its result and skips itself on the next run, so the
+command is safe to repeat and resumes after any crash:
 
-## Mark stamps as done
+| Stage   | What it does                                 | Cache file                                       |
+|---------|----------------------------------------------|--------------------------------------------------|
+| acquire | official stamp list -> `data/stamps.geojson` | `cache/hwn_gpx.zip`                              |
+| network | OSM walking graph + DEM + distance matrix    | `cache/graph_elev.pkl`, `cache/stamp_matrix.npz` |
+| cluster | stamps -> day-trip groups                    | `cache/clusters.json`                            |
+| route   | parking trailhead + walking loop per group   | `cache/parking.json`, `cache/routes.json`        |
+| rank    | drive times from home, Saturday order        | `cache/drives.json`, `cache/ranked.json`         |
+| outputs | plan.csv, GPX files, map, progress list      | `output/`                                        |
 
-After a hike, add the collected stamp numbers to `config.toml`:
+Delete a cache file to force that stage (and everything after it) to
+rebuild. The `network` stage downloads a lot on its first run (the whole
+Harz walking network from Overpass) and can take an hour — later runs
+load the cache in seconds.
+
+## The outputs
+
+- `output/plan.csv` — one row per trip: trailhead, drive km/min, stamps,
+  loop km, ascent, walking time (Naismith + Langmuir).
+- `output/trips/trip_XX.gpx` — track + waypoints per trip; import into
+  Komoot or any GPS app.
+- `output/map.html` — all trips on one map, one colour per trip.
+- `output/progress.md` — tick-off checklist with badge milestones
+  (8 / 16 / 24 / 50 / 111 / 222 stamps).
+
+## After a hike
+
+Add the stamps you collected to `config.toml`:
 
     [progress]
     done = [1, 5, 12]
 
-Later planning stages skip these stamps and re-plan the rest.
+Then re-plan the remaining stamps (keeps the expensive caches):
+
+    uv run python -m harzplan replan
 
 ## All settings
 
-Everything lives in `config.toml`: home coordinates, loop length
-limits (10–18 km), max ascent (600 m), stamps per trip. No magic
-numbers in code.
+Everything lives in `config.toml`: home coordinates, loop limits
+(10–18 km, max 600 m ascent), stamps per trip, Overpass endpoints,
+walking-time rule, badge thresholds. No magic numbers in code.
 
-## Data license
+## Data sources and license
 
-Stamp coordinates come from harzer-wandernadel.de (prepared by
-Markus Gründel). Free for private personal use only — keep this
-repository private and do not redistribute the data.
+- Stamp coordinates: harzer-wandernadel.de GPS download (prepared by
+  Markus Gründel). Free for private personal use only — keep this
+  repository private and do not redistribute the data.
+- Walking network and parking: OpenStreetMap via Overpass (ODbL).
+- Elevation: Copernicus GLO-30 DEM (open data, AWS).
+- Drive times: OSRM public demo server.

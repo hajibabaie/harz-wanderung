@@ -21,6 +21,7 @@ from .network import (
     nearest_graph_nodes,
     pairwise,
     walk_path,
+    with_overpass_fallback,
 )
 
 ROUTES_PATH = config.ROOT / "cache" / "routes.json"
@@ -79,11 +80,10 @@ def fetch_parking(bbox: tuple, net_cfg: dict) -> list[dict]:
         return json.loads(PARKING_PATH.read_text(encoding="utf-8"))
     import osmnx as ox
 
-    ox.settings.cache_folder = str(config.ROOT / "cache" / "osmnx")
-    ox.settings.max_query_area_size = net_cfg["overpass_query_km2"] * 1e6
-    ox.settings.requests_timeout = net_cfg["overpass_timeout_s"]
     print("downloading OSM parking spots ...")
-    gdf = ox.features.features_from_bbox(bbox, {"amenity": "parking"})
+    gdf = with_overpass_fallback(
+        net_cfg, lambda: ox.features.features_from_bbox(bbox, {"amenity": "parking"})
+    )
     out = []
     for _, row in gdf.iterrows():
         access = row.get("access")
