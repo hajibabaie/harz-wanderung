@@ -61,8 +61,9 @@ walking-time rule, badge thresholds. No magic numbers in code.
 ## Data sources and license
 
 - Stamp coordinates: harzer-wandernadel.de GPS download (prepared by
-  Markus Gründel). Free for private personal use only — keep this
-  repository private and do not redistribute the data.
+  Markus Gründel). Free for private personal use only — that is why
+  `data/` is not part of this repository. The acquire stage downloads
+  the file on first run; do not commit or redistribute it.
 - Walking network and parking: OpenStreetMap via Overpass (ODbL).
 - Elevation: Copernicus GLO-30 DEM (open data, AWS).
 - Drive times: OSRM public demo server.

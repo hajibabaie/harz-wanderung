@@ -1,5 +1,7 @@
 .venv/
 cache/
+data/
 output/
+DIGEST.md
 __pycache__/
 *.pyc
