@@ -49,3 +49,9 @@ def test_plan_row_flattens_trip_for_csv():
     assert row["trailhead"] == "Parkplatz Käste & Co"
     assert row["walk_h"] == "1:02"
     assert row["note"] == "singleton"
+
+
+def test_plan_row_notes_extension_and_limits():
+    trip = {**TRIP, "singleton": False, "extended_km": 3.9, "over_limit": True}
+    row = outputs.plan_row(trip, STAMPS)
+    assert row["note"] == "extended +3.9 km, over limit"

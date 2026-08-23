@@ -3,7 +3,9 @@
 For each cluster: collect nearby OSM parking spots, compute network
 distances between them and the cluster's stamps, pick the parking that
 gives the shortest closed loop, and extract the loop's path geometry
-for GPX export. Loops walk in the direction with less climbing.
+for GPX export. Loops walk in the direction with less climbing. A loop
+shorter than the configured minimum is stretched with a detour through
+the node that adds the missing kilometres with the least overshoot.
 """
 import json
 import math
@@ -20,6 +22,7 @@ from .network import (
     MATRIX_PATH,
     nearest_graph_nodes,
     pairwise,
+    path_ascent,
     walk_path,
     with_overpass_fallback,
 )
@@ -62,16 +65,51 @@ def best_trailhead(D: np.ndarray, A: np.ndarray, n_cand: int):
     return c, order, float(length), ascent
 
 
+def choose_detour(order: list[int], src_idx: list[int], dists: list,
+                  D: np.ndarray, need_m: float):
+    """Node to splice into one loop leg so the loop grows by at least need_m.
+
+    dists[i] is the full Dijkstra distance array from loop source i.
+    Returns (leg position, node index, extra metres) with the least
+    overshoot, or None when no node is far enough.
+    """
+    k = len(order)
+    best = None
+    for i in range(k):
+        a, b = order[i], order[(i + 1) % k]
+        extra = dists[a] + dists[b] - D[a, b]
+        extra[src_idx] = np.inf  # never revisit a stamp or the trailhead
+        ok = np.isfinite(extra) & (extra >= need_m)
+        if not ok.any():
+            continue
+        v = int(np.argmin(np.where(ok, extra, np.inf)))
+        if best is None or extra[v] < best[2]:
+            best = (i, v, float(extra[v]))
+    return best
+
+
+def loop_node_path(order: list[int], src_idx: list[int], preds: list,
+                   detour: tuple | None = None) -> list[int]:
+    """Node-index path of the closed loop, optionally through a detour."""
+    path: list[int] = []
+    k = len(order)
+    for i in range(k):
+        a, b = order[i], order[(i + 1) % k]
+        if detour is not None and detour[0] == i:
+            via = detour[1]
+            seg = walk_path(preds[a], src_idx[a], via)
+            seg += walk_path(preds[b], src_idx[b], via)[::-1][1:]
+        else:
+            seg = walk_path(preds[a], src_idx[a], src_idx[b])
+        path.extend(seg[1:] if path else seg)
+    return path
+
+
 def loop_geometry(order: list[int], src_idx: list[int], preds: list,
-                  nodes: list, G) -> list[tuple]:
+                  nodes: list, G, detour: tuple | None = None) -> list[tuple]:
     """(lat, lon) polyline of the closed loop, following network paths."""
-    coords = []
-    for i in range(len(order)):
-        a, b = order[i], order[(i + 1) % len(order)]
-        path = walk_path(preds[a], src_idx[a], src_idx[b])
-        seg = [(G.nodes[nodes[p]]["y"], G.nodes[nodes[p]]["x"]) for p in path]
-        coords.extend(seg[1:] if coords else seg)
-    return coords
+    path = loop_node_path(order, src_idx, preds, detour)
+    return [(G.nodes[nodes[p]]["y"], G.nodes[nodes[p]]["x"]) for p in path]
 
 
 def fetch_parking(bbox: tuple, net_cfg: dict) -> list[dict]:
@@ -147,6 +185,7 @@ def main() -> None:
 
     routes = []
     limit_m = trip["loop_km_max"] * 1000
+    min_m = trip["loop_km_min"] * 1000
     for ci, c in enumerate(clusters):
         nums = c["stamps"]
         stamp_pts = [(stamps[n]["lon"], stamps[n]["lat"]) for n in nums]
@@ -159,34 +198,46 @@ def main() -> None:
         )
         src_nodes = [n for n, _ in cand_nodes] + [stamp_node[n] for n in nums]
         src_idx = [idx[n] for n in src_nodes]
-        D, Asc, preds = pairwise(A, elev, src_idx, limit_m, want_pred=True)
+        D, Asc, preds, dists = pairwise(A, elev, src_idx, limit_m, want_pred=True)
         found = best_trailhead(D, Asc, len(cand_ids))
         entry = {"stamps": nums, "singleton": c["singleton"]}
         if found is None:
             entry["unroutable"] = True
             print(f"WARNING cluster {nums}: no parking reaches every stamp")
-        else:
-            cand, order, loop_m, ascent_m = found
-            p = parking[cand_ids[cand]]
-            n_cand = len(cand_ids)
-            entry.update({
-                "stamps": [nums[i - n_cand] for i in order if i >= n_cand],
-                "trailhead": p,
-                "loop_km": round(loop_m / 1000, 2),
-                "ascent_m": round(ascent_m),
-                "geometry": loop_geometry(order, src_idx, preds, nodes, G),
-                "over_limit": bool(loop_m > limit_m),
-            })
+            routes.append(entry)
+            continue
+        cand, order, loop_m, _ = found
+        detour = None
+        if loop_m < min_m:
+            detour = choose_detour(order, src_idx, dists, D, min_m - loop_m)
+            if detour is None:
+                entry["under_min"] = True
+                print(f"WARNING cluster {nums}: cannot stretch loop to the minimum")
+            else:
+                loop_m += detour[2]
+        path = loop_node_path(order, src_idx, preds, detour)
+        ascent_m = path_ascent(path, elev)
+        n_cand = len(cand_ids)
+        entry.update({
+            "stamps": [nums[i - n_cand] for i in order if i >= n_cand],
+            "trailhead": parking[cand_ids[cand]],
+            "loop_km": round(loop_m / 1000, 2),
+            "ascent_m": round(ascent_m),
+            "extended_km": round(detour[2] / 1000, 2) if detour else 0.0,
+            "geometry": [(G.nodes[nodes[p]]["y"], G.nodes[nodes[p]]["x"]) for p in path],
+            "over_limit": bool(loop_m > limit_m or ascent_m > trip["ascent_m_max"]),
+        })
         routes.append(entry)
         if (ci + 1) % 10 == 0:
             print(f"routed {ci + 1}/{len(clusters)} clusters")
 
     ROUTES_PATH.write_text(json.dumps(routes, ensure_ascii=False), encoding="utf-8")
     ok = [r for r in routes if "loop_km" in r]
+    extended = [r for r in ok if r["extended_km"]]
     over = [r for r in ok if r["over_limit"]]
     print(f"wrote {ROUTES_PATH}")
-    print(f"{len(ok)} routed trips, {len(over)} over the loop limit, "
-          f"{len(routes) - len(ok)} unroutable")
+    print(f"{len(ok)} routed trips, {len(extended)} stretched to the minimum, "
+          f"{len(over)} over a limit, {len(routes) - len(ok)} unroutable")
 
 
 if __name__ == "__main__":

@@ -48,8 +48,12 @@ def plan_row(trip: dict, stamps: dict) -> dict:
     notes = []
     if trip.get("singleton"):
         notes.append("singleton")
+    if trip.get("extended_km"):
+        notes.append(f"extended +{trip['extended_km']} km")
     if trip.get("over_limit"):
-        notes.append("over loop limit")
+        notes.append("over limit")
+    if trip.get("under_min"):
+        notes.append("under minimum")
     return {
         "trip": trip["trip"],
         "trailhead": trip["trailhead"]["name"],

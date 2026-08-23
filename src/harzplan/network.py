@@ -197,33 +197,41 @@ def walk_path(pred: np.ndarray, si: int, ti: int) -> list[int]:
     return path
 
 
+def path_ascent(path: list[int], elev: np.ndarray) -> float:
+    """Metres climbed along a node path (descents do not count)."""
+    p = np.asarray(path)
+    gain = elev[p[1:]] - elev[p[:-1]]
+    return float(np.maximum(gain, 0.0).sum())
+
+
 def pairwise(A, elev: np.ndarray, src_idx: list[int], limit_m: float,
              want_pred: bool = False):
     """Distance (m) and path ascent (m, directional) between the given nodes.
 
     One Dijkstra per source; ascent is summed from node elevations along
-    each predecessor path. Optionally keeps the predecessor arrays for
-    later geometry extraction.
+    each predecessor path. With want_pred, also returns each source's
+    predecessor array and full distance array (for geometry and detours).
     """
     from scipy.sparse.csgraph import dijkstra
 
     k = len(src_idx)
     dist = np.full((k, k), np.inf)
     ascent = np.full((k, k), np.inf)
-    preds = []
+    preds, dists = [], []
     for a, si in enumerate(src_idx):
         d, pred = dijkstra(A, indices=si, return_predecessors=True, limit=limit_m)
         if want_pred:
             preds.append(pred)
+            dists.append(d)
         dist[a, a] = ascent[a, a] = 0.0
         for b, ti in enumerate(src_idx):
             if b == a or not np.isfinite(d[ti]):
                 continue
             dist[a, b] = d[ti]
-            path = walk_path(pred, si, ti)
-            gain = elev[path[1:]] - elev[path[:-1]]
-            ascent[a, b] = float(np.maximum(gain, 0.0).sum())
-    return dist, ascent, preds if want_pred else None
+            ascent[a, b] = path_ascent(walk_path(pred, si, ti), elev)
+    if want_pred:
+        return dist, ascent, preds, dists
+    return dist, ascent, None, None
 
 
 def stamp_matrices(G, node_by_number: dict, limit_m: float):
@@ -231,7 +239,7 @@ def stamp_matrices(G, node_by_number: dict, limit_m: float):
     A, nodes, idx, elev = build_csr(G)
     numbers = sorted(node_by_number)
     src = [idx[node_by_number[m]] for m in numbers]
-    dist, ascent, _ = pairwise(A, elev, src, limit_m)
+    dist, ascent, _, _ = pairwise(A, elev, src, limit_m)
     return numbers, dist, ascent
 
 
