@@ -26,6 +26,14 @@ def test_gpx_document_has_track_and_waypoints_with_escaping():
     names = [w.findtext("g:name", "", ns) for w in wpts]
     assert "HWN007 Käste & Haus" in names
     assert len(root.findall(".//g:trkpt", ns)) == 3
+    assert root.findtext("g:trk/g:name", "", ns) == "Trip 01 – Käste & Haus"
+
+
+def test_trip_title_joins_stamp_names():
+    stamps = {1: {"name": "Eckertalsperre"}, 2: {"name": "Scharfenstein"}}
+    assert outputs.trip_title({"trip": 3, "stamps": [2, 1]}, stamps) == (
+        "Trip 03 – Scharfenstein · Eckertalsperre"
+    )
 
 
 def test_progress_lines_mark_badge_crossings():

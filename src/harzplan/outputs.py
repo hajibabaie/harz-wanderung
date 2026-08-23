@@ -18,9 +18,15 @@ TRIP_COLORS = [
 ]
 
 
+def trip_title(trip: dict, stamps: dict) -> str:
+    """'Trip 03 – Prinzenlaube · Grumbacher Teich' (parking names are vague)."""
+    names = " · ".join(stamps[n]["name"] for n in trip["stamps"])
+    return f"Trip {trip['trip']:02d} – {names}"
+
+
 def gpx_document(trip: dict, stamps: dict) -> str:
     th = trip["trailhead"]
-    title = f"Trip {trip['trip']:02d} – {th['name']}"
+    title = trip_title(trip, stamps)
     parts = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" '
