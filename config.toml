@@ -38,11 +38,11 @@ overpass_retry_wait_s = 180
 [trip]
 # Hard floor: shorter loops get a detour until they reach it.
 loop_km_min = 10.0
-loop_km_max = 18.0
+loop_km_max = 20.0
 ascent_m_max = 600
 stamps_min = 2
 stamps_ideal_min = 3
-stamps_ideal_max = 5
+stamps_ideal_max = 6
 # Clustering keeps this much loop budget free for the walk to/from parking.
 trailhead_reserve_km = 2.0
 
