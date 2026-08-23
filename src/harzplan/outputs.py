@@ -174,13 +174,16 @@ def main() -> None:
         "`[progress] done` in `config.toml` and re-run the pipeline.",
         "",
     ]
+    trips_done = cfg["progress"]["trips_done"]
+    if trips_done:
+        lines.append(f"- [x] Trips 01–{trips_done:02d} — done — stamps "
+                     f"{', '.join(str(n) for n in sorted(done))} — total "
+                     f"{len(done)}/{cfg['data']['stamp_count']}")
     lines += progress_lines(trips, cfg["badges"]["thresholds"], len(done),
                             cfg["data"]["stamp_count"])
     if unplanned:
         lines += ["", "## Not planned yet (no reachable parking)", ""]
         lines += [f"- HWN{n:03d} {stamps[n]['name']}" for n in sorted(unplanned)]
-    if done:
-        lines += ["", f"Already collected before planning: {sorted(done)}"]
     (OUT_DIR / "progress.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     print(f"wrote {OUT_DIR / 'plan.csv'} ({len(rows)} trips)")

@@ -49,6 +49,7 @@ Add the stamps you collected to `config.toml`:
 
     [progress]
     done = [1, 5, 12]
+    trips_done = 1
 
 Then re-plan the remaining stamps (keeps the expensive caches):
 

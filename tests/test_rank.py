@@ -41,3 +41,9 @@ def test_stamps_in_first_n_trips():
     trips = [{"stamps": [1, 2, 3]}, {"stamps": [4]}, {"stamps": [5, 6]}]
     assert rank.stamps_in_first_n(trips, 2) == 4
     assert rank.stamps_in_first_n(trips, 10) == 6
+
+
+def test_rank_trips_can_continue_numbering_after_finished_trips():
+    trips = [{"stamps": [9], "drive_min": 30.0}, {"stamps": [1], "drive_min": 10.0}]
+    ranked = rank.rank_trips(trips, start=3)
+    assert [t["trip"] for t in ranked] == [3, 4]

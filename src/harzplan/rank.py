@@ -66,10 +66,10 @@ def fetch_drives(home: dict, trailheads: list[dict], osrm: dict) -> list[dict]:
     return [cache[key(p)] for p in trailheads]
 
 
-def rank_trips(trips: list[dict]) -> list[dict]:
-    """Shortest drive first; trip numbers start at 1."""
+def rank_trips(trips: list[dict], start: int = 1) -> list[dict]:
+    """Shortest drive first; numbering continues after the finished trips."""
     ranked = sorted(trips, key=lambda t: (t["drive_min"], t["stamps"][0]))
-    return [{**t, "trip": i} for i, t in enumerate(ranked, start=1)]
+    return [{**t, "trip": i} for i, t in enumerate(ranked, start=start)]
 
 
 def stamps_in_first_n(trips: list[dict], n: int) -> int:
@@ -94,15 +94,15 @@ def main() -> None:
         }
         for r, d in zip(routable, drives)
     ]
-    ranked = rank_trips(trips)
+    ranked = rank_trips(trips, start=cfg["progress"]["trips_done"] + 1)
     RANKED_PATH.write_text(
         json.dumps({"trips": ranked, "unroutable": unroutable}, ensure_ascii=False),
         encoding="utf-8",
     )
     print(f"wrote {RANKED_PATH}")
-    print(f"{len(ranked)} trips ranked; the first 8 cover "
-          f"{stamps_in_first_n(ranked, 8)} stamps (Bronze needs 8)")
-    print(f"drive minutes: trip 1 = {ranked[0]['drive_min']:.0f}, "
+    print(f"{len(ranked)} trips ranked, numbered {ranked[0]['trip']}-{ranked[-1]['trip']}; "
+          f"the first 8 cover {stamps_in_first_n(ranked, 8)} stamps")
+    print(f"drive minutes: next trip = {ranked[0]['drive_min']:.0f}, "
           f"last = {ranked[-1]['drive_min']:.0f}")
 
 
