@@ -4,7 +4,7 @@ Plans Saturday day-trips to collect all 222 Harzer Wandernadel stamps,
 starting from Clausthal-Zellerfeld. Real walking-network distances, real
 elevation, parking trailheads, and drive times — not straight lines.
 
-![All 78 Saturday loops across the Harz, one colour per trip](docs/map.png)
+![Saturday loops across the Harz, one colour per trip (first plan)](docs/map.png)
 
 ## Setup
 
