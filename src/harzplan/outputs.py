@@ -76,6 +76,12 @@ def plan_row(trip: dict, stamps: dict) -> dict:
     }
 
 
+def clear_trip_files(trips_dir) -> None:
+    """Drop GPX files of the previous plan so numbering never leaves leftovers."""
+    for old in trips_dir.glob("trip_*.gpx"):
+        old.unlink()
+
+
 def progress_lines(trips: list[dict], thresholds: list, done_count: int,
                    total: int) -> list[str]:
     lines = []
@@ -143,6 +149,7 @@ def main() -> None:
     stamps = {s["number"]: s for s in load_stamps()}
     trips_dir = OUT_DIR / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
+    clear_trip_files(trips_dir)
 
     rows = [plan_row(t, stamps) for t in trips]
     with open(OUT_DIR / "plan.csv", "w", newline="", encoding="utf-8-sig") as f:

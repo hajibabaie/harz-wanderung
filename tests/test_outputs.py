@@ -63,3 +63,11 @@ def test_plan_row_notes_extension_and_limits():
     trip = {**TRIP, "singleton": False, "extended_km": 3.9, "over_limit": True}
     row = outputs.plan_row(trip, STAMPS)
     assert row["note"] == "extended +3.9 km, over limit"
+
+
+def test_clear_trip_files_removes_only_old_gpx(tmp_path):
+    (tmp_path / "trip_01.gpx").write_text("x")
+    (tmp_path / "trip_78.gpx").write_text("x")
+    (tmp_path / "notes.txt").write_text("keep")
+    outputs.clear_trip_files(tmp_path)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["notes.txt"]
