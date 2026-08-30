@@ -65,8 +65,9 @@ climb_min_per_100m = 10.0
 gentle_descent_min_per_300m = -10.0
 
 [badges]
-# Stamp counts that earn a Harzer Wandernadel badge.
-thresholds = [[8, "Bronze"], [16, "Silber"], [24, "Gold"], [50, "Wanderkönig"], [111, "Wanderkaiser"], [222, "Harzer Steiger"]]
+# Official badges (harzer-wandernadel.de): Bronze 8, Silber 16, Gold 24,
+# Wanderkönig 50, Wanderkaiser 222. 111 is only a halfway milestone.
+thresholds = [[8, "Bronze"], [16, "Silber"], [24, "Gold"], [50, "Wanderkönig"], [111, "Halbzeit"], [222, "Wanderkaiser"]]
 
 [outputs]
 # The Folium map thins each loop to this many points (GPX keeps all).
@@ -74,6 +75,6 @@ map_points_per_trip = 300
 
 [progress]
 # Stamp numbers already collected. Later stages drop them from planning.
-done = [137, 138, 139, 145, 128, 127]
+done = [137, 138, 139, 145, 128, 127, 144, 147, 146]
 # Finished trips; the next plan continues numbering after this.
-trips_done = 2
+trips_done = 3
