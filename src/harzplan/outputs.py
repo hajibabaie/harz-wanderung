@@ -82,15 +82,16 @@ def clear_trip_files(trips_dir) -> None:
         old.unlink()
 
 
-def progress_lines(trips: list[dict], thresholds: list, done_count: int,
-                   total: int) -> list[str]:
+def progress_lines(trips: list[dict], stamps: dict, thresholds: list,
+                   done_count: int, total: int) -> list[str]:
     lines = []
     cum = done_count
     for t in trips:
         before, cum = cum, cum + len(t["stamps"])
-        stamps_txt = ", ".join(str(n) for n in t["stamps"])
-        line = (f"- [ ] Trip {t['trip']:02d} — {t['trailhead']['name']} — "
-                f"stamps {stamps_txt} — total {cum}/{total}")
+        names = " · ".join(stamps[n]["name"] for n in t["stamps"])
+        numbers = ", ".join(str(n) for n in t["stamps"])
+        line = (f"- [ ] Trip {t['trip']:02d} — {names} ({numbers}) — "
+                f"from {t['trailhead']['name']} — total {cum}/{total}")
         badges = [name for count, name in thresholds if before < count <= cum]
         if badges:
             line += f"  **← {', '.join(badges)}!**"
@@ -179,8 +180,8 @@ def main() -> None:
         lines.append(f"- [x] Trips 01–{trips_done:02d} — done — stamps "
                      f"{', '.join(str(n) for n in sorted(done))} — total "
                      f"{len(done)}/{cfg['data']['stamp_count']}")
-    lines += progress_lines(trips, cfg["badges"]["thresholds"], len(done),
-                            cfg["data"]["stamp_count"])
+    lines += progress_lines(trips, stamps, cfg["badges"]["thresholds"],
+                            len(done), cfg["data"]["stamp_count"])
     if unplanned:
         lines += ["", "## Not planned yet (no reachable parking)", ""]
         lines += [f"- HWN{n:03d} {stamps[n]['name']}" for n in sorted(unplanned)]

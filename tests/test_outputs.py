@@ -41,8 +41,9 @@ def test_progress_lines_mark_badge_crossings():
         {"trip": 1, "stamps": [1, 2, 3, 4, 5], "trailhead": {"name": "A"}},
         {"trip": 2, "stamps": [6, 7, 8, 9], "trailhead": {"name": "B"}},
     ]
-    lines = outputs.progress_lines(trips, [[8, "Bronze"]], done_count=0, total=222)
-    assert lines[0].startswith("- [ ] Trip 01")
+    stamps = {n: {"name": f"S{n}"} for n in range(1, 10)}
+    lines = outputs.progress_lines(trips, stamps, [[8, "Bronze"]], done_count=0, total=222)
+    assert lines[0].startswith("- [ ] Trip 01 — S1 · S2 · S3 · S4 · S5 (1, 2, 3, 4, 5)")
     assert "5/222" in lines[0]
     assert "Bronze" not in lines[0]
     assert "9/222" in lines[1]
